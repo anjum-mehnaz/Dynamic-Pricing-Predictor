@@ -51,7 +51,7 @@ Created an R environment using Ubuntu in Google Colab to simplify package instal
 - Capped outliers using IQR
 - Visualized distributions using histograms and boxplots
 - Saved the cleaned dataset to CSV for reuse
-- 
+
 ### 4. Exploratory Data Analysis (EDA)
 - Explored relationships using scatter plots and histograms
 - Built a correlation matrix to examine inter-feature dependencies
@@ -71,16 +71,22 @@ Created an R environment using Ubuntu in Google Colab to simplify package instal
 
 ### 7. Model Evaluation & Optimization
 - Evaluated models using Mean Absolute Error (MAE) & R-squared (R²)
-- Initial Performance:
-  - Model	        MAE	    R²
-  - Random Forest	54.81	  0.8826
-  - XGBoost	      57.23	  0.8515
+#### 📊 Initial Performance
 
-- After Tuning (Grid Search + 5-fold CV):
-  - Model	        MAE	    R²
-  - Tuned RF	    51.80	  0.8793
-  - Tuned XGBoost	51.78	  0.8846
-  ✅ Conclusion: Tuned XGBoost performed the best with the lowest MAE and highest R².
+| Model          | MAE    | R²     |
+|----------------|--------|--------|
+| Random Forest  | 55.93  | 0.8756 |
+| XGBoost        | 57.23  | 0.8515 |
+
+---
+
+#### 🔧 After Tuning (Grid Search + 5-fold CV)
+
+| Model           | MAE    | R²     |
+|-----------------|--------|--------|
+| Tuned RF        | 51.79  | 0.8793 |
+| Tuned XGBoost   | 51.78  | 0.8846 |
+  - ✅ Conclusion: Tuned XGBoost performed the best with the lowest MAE and highest R².
 
 ### 8. Results and Insights
 - 🔑 Feature Importance (XGBoost):
