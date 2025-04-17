@@ -14,6 +14,7 @@ This project leverages machine learning in R to predict optimal ride fares based
 8. Results and Insights
 9. Technologies Used
 10. Authors
+---------------------------------------------------
 
 ### 1. Environment Setup
 Created an R environment using Ubuntu in Google Colab to simplify package installation. Key libraries used:
@@ -71,6 +72,7 @@ Created an R environment using Ubuntu in Google Colab to simplify package instal
 
 ### 7. Model Evaluation & Optimization
 - Evaluated models using Mean Absolute Error (MAE) & R-squared (R²)
+----
 #### 📊 Initial Performance
 
 | Model          | MAE    | R²     |
@@ -78,7 +80,6 @@ Created an R environment using Ubuntu in Google Colab to simplify package instal
 | Random Forest  | 55.93  | 0.8756 |
 | XGBoost        | 57.23  | 0.8515 |
 
----
 
 #### 🔧 After Tuning (Grid Search + 5-fold CV)
 
@@ -86,7 +87,8 @@ Created an R environment using Ubuntu in Google Colab to simplify package instal
 |-----------------|--------|--------|
 | Tuned RF        | 51.79  | 0.8793 |
 | Tuned XGBoost   | 51.78  | 0.8846 |
-  - ✅ Conclusion: Tuned XGBoost performed the best with the lowest MAE and highest R².
+---
+✅ Conclusion: Tuned XGBoost performed the best with the lowest MAE and highest R².
 
 ### 8. Results and Insights
 - 🔑 Feature Importance (XGBoost):
