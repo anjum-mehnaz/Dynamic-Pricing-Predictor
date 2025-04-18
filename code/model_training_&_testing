@@ -1,0 +1,37 @@
+# Splitting the data into training and test sets
+set.seed(123)
+train_index <- sample(1:nrow(df), 0.8 * nrow(df))
+train_data <- df[train_index, ]
+test_data <- df[-train_index, ]
+
+
+# Random Forest Model
+library(randomForest)
+rf_model <- randomForest(Historical_Cost_of_Ride ~ Number_of_Riders + Number_of_Drivers + Location_Category + Customer_Loyalty_Status +
+                           Number_of_Past_Rides + Average_Ratings + Time_of_Booking + Vehicle_Type + Expected_Ride_Duration +
+                           Ride_Density + Surge_Indicator + Peak_Hours_Flag, data = train_data, ntree = 100)
+rf_preds <- predict(rf_model, test_data)
+rf_mae <- mean(abs(rf_preds - test_data$Historical_Cost_of_Ride))
+rf_r2 <- cor(rf_preds, test_data$Historical_Cost_of_Ride)^2
+
+# XGBoost Model
+library(xgboost)
+dtrain <- xgb.DMatrix(data = as.matrix(train_data[, c("Number_of_Riders", "Number_of_Drivers", "Location_Category",
+                                                       "Customer_Loyalty_Status", "Number_of_Past_Rides", "Average_Ratings",
+                                                       "Time_of_Booking", "Vehicle_Type", "Expected_Ride_Duration",
+                                                       "Ride_Density", "Surge_Indicator", "Peak_Hours_Flag")]),
+                      label = train_data$Historical_Cost_of_Ride)
+dtest <- xgb.DMatrix(data = as.matrix(test_data[, c("Number_of_Riders", "Number_of_Drivers", "Location_Category",
+                                                      "Customer_Loyalty_Status", "Number_of_Past_Rides", "Average_Ratings",
+                                                      "Time_of_Booking", "Vehicle_Type", "Expected_Ride_Duration",
+                                                      "Ride_Density", "Surge_Indicator", "Peak_Hours_Flag")]),
+                     label = test_data$Historical_Cost_of_Ride)
+params <- list(objective = "reg:squarederror", eval_metric = "rmse")
+xgb_model <- xgboost(params = params, data = dtrain, nrounds = 100)
+xgb_preds <- predict(xgb_model, dtest)
+xgb_mae <- mean(abs(xgb_preds - test_data$Historical_Cost_of_Ride))
+xgb_r2 <- cor(xgb_preds, test_data$Historical_Cost_of_Ride)^2
+
+# Model performance comparison
+cat("Random Forest MAE:", rf_mae, "R²:", rf_r2, "\n")
+cat("XGBoost MAE:", xgb_mae, "R²:", xgb_r2, "\n")
