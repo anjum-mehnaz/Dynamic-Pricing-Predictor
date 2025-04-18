@@ -44,7 +44,7 @@ Created an R environment using Ubuntu in Google Colab to simplify package instal
   - Expected Ride Duration
   - Historical Cost of Ride (Target Variable)
 
-### 3. Data Pre-processing
+### 3. Data Pre-processing & Visualization
 - Checked for null values (none found) and duplicates
 - Performed encoding for categorical columns:
   - One-Hot Encoding for Location_Category, Time_of_Booking
