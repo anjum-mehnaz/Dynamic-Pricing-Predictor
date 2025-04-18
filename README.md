@@ -68,9 +68,9 @@ Created an R environment using Ubuntu in Google Colab to simplify package instal
 - Implemented regression models in R, including:
   - Random Forest Regressor
   - Gradient Boosting Regressor
-- Further tuned hyperparameters using cross-validation techniques for both the regressors and compared the results for the best model.
 
 ### 7. Model Evaluation & Optimization
+- Further tuned hyperparameters using cross-validation techniques for both the regressors and compared the results for the best model.
 - Evaluated models using Mean Absolute Error (MAE) & R-squared (R²)
 ----
 #### 📊 Initial Performance
