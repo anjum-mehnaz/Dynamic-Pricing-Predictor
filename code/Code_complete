@@ -1,0 +1,314 @@
+# Setting up R environment in Colab by creating Ubuntu system to get access to the R packages.
+system("apt-get update", intern = TRUE)
+system("apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev", intern = TRUE)
+
+install.packages("tidyverse")
+install.packages("ggplot2")
+install.packages("dplyr")
+install.packages("readr")
+install.packages("lubridate")
+install.packages("corrplot")
+install.packages("randomForest")
+install.packages("xgboost")
+install.packages("caret")
+install.packages("ranger")
+install.packages("car")
+
+library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(lubridate)
+library(corrplot)
+library(randomForest)
+library(xgboost)
+library(caret)
+library(ranger)
+library("car")
+
+# Loading dataset
+df <- read_csv("dynamic_pricing.csv")
+
+glimpse(df)
+
+colSums(is.na(df))  # This will give you the count of NAs per column
+
+# Check for duplicate rows in the dataframe
+duplicates <- df[duplicated(df), ]
+
+# Check if there are any missing values in the duplicated rows
+any(is.na(duplicates))
+
+#  This will give you the count of NAs per column
+colSums(is.na(df))  
+
+# Check for duplicate rows in the dataframe
+duplicates <- df[duplicated(df), ]
+
+# Check if there are any missing values in the duplicated rows
+any(is.na(duplicates))
+
+# Encoding for Categorical columns-------------
+# Label Encoding for Ordinal Variables
+df <- df %>%
+  mutate(Customer_Loyalty_Status = as.integer(factor(Customer_Loyalty_Status,
+                 levels = c("Silver", "Regular", "Gold"), ordered = TRUE)),
+         Vehicle_Type = as.integer(factor(Vehicle_Type,
+                 levels = c("Economy", "Premium", "Luxury"), ordered = TRUE)))
+
+# One-Hot Encoding for Nominal Variables
+df <- df %>%
+  mutate(Location_Category = factor(Location_Category),
+         Time_of_Booking = factor(Time_of_Booking))
+df <- df %>%
+  mutate(
+    # Encoding for Time_of_Booking
+    Time_of_Booking = factor(Time_of_Booking, levels = c("Morning", "Afternoon", "Evening", "Night"), ordered = TRUE) %>%
+      as.integer(),
+
+    # Encoding for Location_Category
+    Location_Category = factor(Location_Category, levels = c("Rural", "Suburban", "Urban"), ordered = TRUE) %>%
+      as.integer()
+  )
+# View result
+head(df)
+
+# Capping Outliers------------------------------
+# Function to cap outliers using IQR
+cap_outliers <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR_val <- Q3 - Q1
+  lower_bound <- Q1 - 1.5 * IQR_val
+  upper_bound <- Q3 + 1.5 * IQR_val
+  x[x < lower_bound] <- lower_bound
+  x[x > upper_bound] <- upper_bound
+  return(x)
+}
+
+# Apply outlier capping to all numeric columns
+df[sapply(df, is.numeric)] <- lapply(df[sapply(df, is.numeric)], cap_outliers)
+
+summary(df)
+
+# Data Visualization--------------------
+library(ggplot2)
+# Histograms
+for (col in numeric_columns) {
+  print(
+    ggplot(df, aes_string(col)) +
+      geom_histogram(fill = "skyblue", bins = 75, color = "black") +
+      ggtitle(paste("Histogram of", col)) +
+      theme_minimal()
+  )
+}
+# Boxplots
+for (col in numeric_columns) {
+  print(
+    ggplot(df, aes_string(x = "''", y = col)) +  # use empty string for x-axis label
+      geom_boxplot(fill = "tomato") +
+      ggtitle(paste("Boxplot of", col)) +
+      xlab("") +
+      theme_minimal()
+  )
+}
+
+# Correlation matrix---------------------
+
+library(corrplot)
+options(repr.plot.width = 10, repr.plot.height = 10)  # Set width and height in inches
+corrplot(cor(df, use = "complete.obs"), method = "color", type = "upper", tl.cex = 1.2)
+
+# Storing the dataset for reuse
+write.csv(df, "cleaned_rideshare_data.csv", row.names = FALSE)
+
+# Feature Engineering-------------------------
+
+# Create new engineered features using existing columns
+df$Ride_Density <- df$Number_of_Riders / df$Number_of_Drivers
+df$Surge_Indicator <- ifelse(df$Number_of_Riders > 1.5 * df$Number_of_Drivers, 1, 0)
+
+# Create Peak_Hours_Flag based on the ordered `Time_of_Booking` (1=Morning, 2=Afternoon, 3=Evening)
+df$Peak_Hours_Flag <- ifelse(df$Time_of_Booking %in% c(1, 2, 3), 1, 0)  # Morning, Afternoon, Evening
+
+# Now perform correlation analysis on all columns
+correlation_matrix <- cor(df[, c(
+  "Number_of_Riders", "Number_of_Drivers", "Location_Category",
+  "Customer_Loyalty_Status", "Number_of_Past_Rides", "Average_Ratings",
+  "Time_of_Booking", "Vehicle_Type", "Expected_Ride_Duration",
+  "Historical_Cost_of_Ride", "Ride_Density", "Surge_Indicator",
+  "Peak_Hours_Flag"
+)], use = "complete.obs")
+
+# Print the correlation matrix
+print(correlation_matrix)
+
+# Plot the correlation matrix using corrplot
+library(corrplot)
+corrplot(correlation_matrix, method = "color", type = "upper", tl.cex = 0.8)
+
+# Splitting the data into training and test sets
+set.seed(123)
+train_index <- sample(1:nrow(df), 0.8 * nrow(df))
+train_data <- df[train_index, ]
+test_data <- df[-train_index, ]
+
+
+# Random Forest Model
+library(randomForest)
+rf_model <- randomForest(Historical_Cost_of_Ride ~ Number_of_Riders + Number_of_Drivers + Location_Category + Customer_Loyalty_Status +
+                           Number_of_Past_Rides + Average_Ratings + Time_of_Booking + Vehicle_Type + Expected_Ride_Duration +
+                           Ride_Density + Surge_Indicator + Peak_Hours_Flag, data = train_data, ntree = 100)
+rf_preds <- predict(rf_model, test_data)
+rf_mae <- mean(abs(rf_preds - test_data$Historical_Cost_of_Ride))
+rf_r2 <- cor(rf_preds, test_data$Historical_Cost_of_Ride)^2
+
+# XGBoost Model
+library(xgboost)
+dtrain <- xgb.DMatrix(data = as.matrix(train_data[, c("Number_of_Riders", "Number_of_Drivers", "Location_Category",
+                                                       "Customer_Loyalty_Status", "Number_of_Past_Rides", "Average_Ratings",
+                                                       "Time_of_Booking", "Vehicle_Type", "Expected_Ride_Duration",
+                                                       "Ride_Density", "Surge_Indicator", "Peak_Hours_Flag")]),
+                      label = train_data$Historical_Cost_of_Ride)
+dtest <- xgb.DMatrix(data = as.matrix(test_data[, c("Number_of_Riders", "Number_of_Drivers", "Location_Category",
+                                                      "Customer_Loyalty_Status", "Number_of_Past_Rides", "Average_Ratings",
+                                                      "Time_of_Booking", "Vehicle_Type", "Expected_Ride_Duration",
+                                                      "Ride_Density", "Surge_Indicator", "Peak_Hours_Flag")]),
+                     label = test_data$Historical_Cost_of_Ride)
+params <- list(objective = "reg:squarederror", eval_metric = "rmse")
+xgb_model <- xgboost(params = params, data = dtrain, nrounds = 100)
+xgb_preds <- predict(xgb_model, dtest)
+xgb_mae <- mean(abs(xgb_preds - test_data$Historical_Cost_of_Ride))
+xgb_r2 <- cor(xgb_preds, test_data$Historical_Cost_of_Ride)^2
+
+# Model performance comparison
+cat("Random Forest MAE:", rf_mae, "R²:", rf_r2, "\n")
+cat("XGBoost MAE:", xgb_mae, "R²:", xgb_r2, "\n")
+
+library(xgboost)
+
+# Define all the predictor columns
+predictor_columns <- c("Number_of_Riders", "Number_of_Drivers", "Location_Category",
+                       "Customer_Loyalty_Status", "Number_of_Past_Rides",
+                       "Average_Ratings", "Time_of_Booking", "Vehicle_Type",
+                       "Expected_Ride_Duration",
+                       "Ride_Density", "Surge_Indicator", "Peak_Hours_Flag")
+
+# Create training data matrix
+train_matrix <- xgb.DMatrix(data = as.matrix(train_data[, predictor_columns]), label = train_data$Historical_Cost_of_Ride)
+test_matrix <- xgb.DMatrix(data = as.matrix(test_data[, predictor_columns]), label = test_data$Historical_Cost_of_Ride)
+
+# Set up the caret training grid
+xgb_grid <- expand.grid(
+  nrounds = c(50, 100),         # number of boosting rounds
+  max_depth = c(3, 6, 9),       # depth of trees
+  eta = c(0.1, 0.3),            # learning rate
+  gamma = 0,                    # minimum loss reduction
+  colsample_bytree = 1,         # subsample ratio of columns
+  min_child_weight = 1,         # minimum sum of instance weight
+  subsample = 1                 # subsample ratio of training instance
+)
+
+# Train control
+xgb_control <- trainControl(method = "cv", number = 5, verboseIter = FALSE)
+
+# Train the model
+set.seed(123)
+xgb_tuned <- train(
+  x = train_data[, predictor_columns],
+  y = train_data$Historical_Cost_of_Ride,
+  method = "xgbTree",
+  trControl = xgb_control,
+  tuneGrid = xgb_grid,
+  verbose = FALSE
+)
+
+# Evaluate on test set
+xgb_best_model <- xgb_tuned$finalModel
+xgb_preds <- predict(xgb_tuned, newdata = test_data[, predictor_columns])
+xgb_mae <- mean(abs(xgb_preds - test_data$Historical_Cost_of_Ride))
+xgb_r2 <- cor(xgb_preds, test_data$Historical_Cost_of_Ride)^2
+
+cat("Tuned XGBoost MAE:", xgb_mae, "R²:", xgb_r2, "\n")
+
+library(randomForest)
+library(caret)
+
+# Define predictor columns
+predictor_columns <- c("Number_of_Riders", "Number_of_Drivers", "Location_Category",
+                       "Customer_Loyalty_Status", "Number_of_Past_Rides", "Average_Ratings",
+                       "Time_of_Booking", "Vehicle_Type", "Expected_Ride_Duration",
+                       "Ride_Density", "Surge_Indicator", "Peak_Hours_Flag")
+
+# Set up tuning grid for Random Forest
+rf_grid <- expand.grid(mtry = c(2, 4, 6, 8))  # number of variables randomly sampled at each split
+
+# Set up train control for cross-validation
+rf_control <- trainControl(method = "cv", number = 5, verboseIter = FALSE)
+
+# Train the Random Forest model
+set.seed(123)
+rf_tuned <- train(
+  x = train_data[, predictor_columns],
+  y = train_data$Historical_Cost_of_Ride,
+  method = "rf",
+  trControl = rf_control,
+  tuneGrid = rf_grid,
+  ntree = 100,
+  importance = TRUE
+)
+
+# Evaluate on test set
+rf_preds <- predict(rf_tuned, newdata = test_data[, predictor_columns])
+rf_mae <- mean(abs(rf_preds - test_data$Historical_Cost_of_Ride))
+rf_r2 <- cor(rf_preds, test_data$Historical_Cost_of_Ride)^2
+
+cat("Tuned Random Forest MAE:", rf_mae, "R²:", rf_r2, "\n")
+
+# Model comparison summary
+cat("Model Comparison Summary:\n")
+cat("-------------------------------------------------\n")
+cat("Previous Models:\n")
+cat("Random Forest - MAE:", 55.93038, "R²:", 0.8754674, "\n")
+cat("XGBoost (Before Tuning) - MAE:", 57.23552, "R²:", 0.8515301, "\n")
+cat("-------------------------------------------------\n")
+cat("Tuned Models:\n")
+cat("Tuned Random Forest - MAE:", 51.7977, "R²:", 0.8793644, "\n")
+cat("Tuned XGBoost - MAE:", 51.78446, "R²:", 0.884614, "\n")
+cat("-------------------------------------------------\n")
+cat("Conclusion: The tuned XGBoost model performs the best with the lowest MAE and highest R²,\n")
+cat("closely followed by the tuned Random Forest. Tuning significantly improved both models' performance.\n")
+
+
+
+# Feature importance
+importance_matrix <- xgb.importance(model = xgb_best_model)
+print(importance_matrix)
+xgb.plot.importance(importance_matrix, top_n = 10)
+
+# Print top 3 features by Gain
+cat("\n🔹 Top 3 Features by Gain:\n")
+feature_importance %>%
+  arrange(desc(Gain)) %>%
+  slice(1:3) %>%
+  print()
+
+# Print top 3 features by Cover
+cat("\n🔹 Top 3 Features by Cover:\n")
+feature_importance %>%
+  arrange(desc(Cover)) %>%
+  slice(1:3) %>%
+  print()
+
+# Print top 3 features by Frequency
+cat("\n🔹 Top 3 Features by Frequency:\n")
+feature_importance %>%
+  arrange(desc(Frequency)) %>%
+  slice(1:3) %>%
+  print()
+
+# Additional insights
+cat("\n✅ Insight:\n")
+cat("- 'Expected_Ride_Duration' dominates all three metrics (Gain, Cover, and Frequency).\n")
+cat("- 'Vehicle_Type' contributes significantly after that, especially in cover and frequency.\n")
+cat("- 'Location_Category' and 'Time_of_Booking' have minimal impact.\n")
