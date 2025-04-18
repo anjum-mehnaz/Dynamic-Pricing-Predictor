@@ -1,6 +1,5 @@
 # Save the best model
-best_xgb_model <- tuned_xgb_model$finalModel
-saveRDS(best_xgb_model, file = "best_model.rds")
+saveRDS(xgb_best_model, file = "best_model.rds")
 
 # Feature importance
 importance_matrix <- xgb.importance(model = xgb_best_model)
