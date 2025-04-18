@@ -279,7 +279,9 @@ cat("-------------------------------------------------\n")
 cat("Conclusion: The tuned XGBoost model performs the best with the lowest MAE and highest R²,\n")
 cat("closely followed by the tuned Random Forest. Tuning significantly improved both models' performance.\n")
 
-
+# Save the best model
+best_xgb_model <- tuned_xgb_model$finalModel
+saveRDS(best_xgb_model, file = "best_model.rds")
 
 # Feature importance
 importance_matrix <- xgb.importance(model = xgb_best_model)
