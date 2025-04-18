@@ -44,16 +44,16 @@ Created an R environment using Ubuntu in Google Colab to simplify package instal
   - Expected Ride Duration
   - Historical Cost of Ride (Target Variable)
 
-### 3. Data Pre-processing & Visualization
+### 3. Data Pre-processing
 - Checked for null values (none found) and duplicates
 - Performed encoding for categorical columns:
   - One-Hot Encoding for Location_Category, Time_of_Booking
   - Label Encoding for Customer_Loyalty_Status, Vehicle_Type
 - Capped outliers using IQR
-- Visualized distributions using histograms and boxplots
-- Saved the cleaned dataset to CSV for reuse
 
 ### 4. Exploratory Data Analysis (EDA)
+- Visualized distributions using histograms and boxplots
+- Saved the cleaned dataset to CSV for reuse
 - Explored relationships using scatter plots and histograms
 - Built a correlation matrix to examine inter-feature dependencies
 - Observed strong correlation between ride duration and ride cost
