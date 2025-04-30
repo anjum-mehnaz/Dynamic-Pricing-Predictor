@@ -314,3 +314,62 @@ cat("\n✅ Insight:\n")
 cat("- 'Expected_Ride_Duration' dominates all three metrics (Gain, Cover, and Frequency).\n")
 cat("- 'Vehicle_Type' contributes significantly after that, especially in cover and frequency.\n")
 cat("- 'Location_Category' and 'Time_of_Booking' have minimal impact.\n")
+
+library(ggplot2)
+library(dplyr)
+library(scales)
+
+# Prepare the data
+importance_df <- as_tibble(importance_matrix) %>%
+  slice_max(Frequency, n = 10) %>%
+  arrange(desc(Frequency)) %>%
+  mutate(
+    Feature = factor(Feature, levels = Feature),  # enforce ordering for color mapping
+    Percentage = Frequency / sum(Frequency) * 100,
+    Label = paste0(Feature, ": ", round(Percentage, 1), "%")
+  )
+
+# Plot with correctly mapped legend colors
+ggplot(importance_df, aes(x = "", y = Percentage, fill = Feature)) +
+  geom_bar(stat = "identity", width = 1, color = "white") +
+  coord_polar("y", start = 0) +
+  scale_fill_brewer(palette = "Paired", labels = importance_df$Label) +
+  theme_void() +
+  labs(title = "Top 10 Feature Importances (Pie Chart)", fill = "Feature\n(Percentage)") +
+  theme(
+    plot.title = element_text(size = 20, face = "bold", hjust = 0.5),
+    legend.position = "right",
+    legend.title = element_text(size = 18, face = "bold"),
+    legend.text = element_text(size = 20)
+  )
+
+
+# Actual vs Predicted Plot for XGBoost
+library(ggplot2)
+
+# Create a dataframe for plotting
+comparison_df <- data.frame(
+  Actual = test_data$Historical_Cost_of_Ride,
+  Predicted = xgb_preds
+)
+
+# Poster-quality Actual vs Predicted Plot
+ggplot(comparison_df, aes(x = Actual, y = Predicted)) +
+  geom_point(color = "dodgerblue", alpha = 0.7, size = 2.5) +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "darkred", size = 1) +
+  labs(title = "Actual vs Predicted Ride Costs (XGBoost)",
+       x = "Actual Ride Cost",
+       y = "Predicted Ride Cost") +
+  theme_minimal(base_size = 16) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 20, face = "bold"),
+    axis.title.x = element_text(size = 18, face = "bold"),
+    axis.title.y = element_text(size = 18, face = "bold"),
+    axis.text.x = element_text(size = 16),
+    axis.text.y = element_text(size = 16),
+    axis.line = element_line(size = 1.2, colour = "black"),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank()
+  ) +
+  coord_equal()
+
